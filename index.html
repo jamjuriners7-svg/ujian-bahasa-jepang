@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Ujian Bahasa Jepang – Master Rekap</title>
+<style>
+body{font-family:Arial;padding:20px;}
+button{padding:10px;width:100%;margin-top:5px;}
+</style>
+</head>
+<body>
+
+<h2>Ujian Bahasa Jepang</h2>
+
+<label>Nama</label><br>
+<input id="nama"><br><br>
+
+<label>Kelas</label><br>
+<select id="kelas">
+  <option value="X">X</option>
+  <option value="XI">XI</option>
+  <option value="XII">XII</option>
+</select><br><br>
+
+<button id="btnMulai">Mulai Ujian</button>
+
+<h3 id="timer">Waktu: --</h3>
+<hr>
+
+<div id="areaSoal"></div>
+
+<script>
+const bankSoal = {
+  X: [
+    { soal: "Apa arti あい (ai)?", pilihan: ["Cinta","Air","Api"], jawaban: 0 },
+    { soal: "Huruf あ dibaca?", pilihan: ["A","I","U"], jawaban: 0 },
+    { soal: "Huruf い dibaca?", pilihan: ["I","A","U"], jawaban: 0 }
+  ],
+  XI: [
+    { soal: "Apa arti 食べる?", pilihan: ["Minum","Makan","Tidur"], jawaban: 1 },
+    { soal: "Huruf さ dibaca?", pilihan: ["Sa","Shi","Su"], jawaban: 0 }
+  ],
+  XII: [
+    { soal: "Bentuk lampau 行く?", pilihan: ["行った","行きます","行かない"], jawaban: 0 },
+    { soal: "Huruf て dibaca?", pilihan: ["Te","To","Ta"], jawaban: 0 }
+  ]
+};
+
+const durasiUjian = { X: 60, XI: 90, XII: 120 };
+
+let soalAktif=[], indeks=0, skor=0, waktu=0, timerInterval, sudahSelesai=false;
+
+document.getElementById("btnMulai").addEventListener("click", mulaiUjian);
+
+function acakArray(array){ return array.sort(()=>Math.random()-0.5); }
+
+function mulaiUjian(){
+  const nama = document.getElementById("nama").value;
+  const kelas = document.getElementById("kelas").value;
+
+  if(!nama){ alert("Nama wajib diisi"); return; }
+
+  soalAktif = acakArray(bankSoal[kelas]);
+  indeks=0; skor=0; waktu=durasiUjian[kelas]; sudahSelesai=false;
+
+  document.getElementById("btnMulai").disabled=true;
+
+  mulaiTimer();
+  tampilSoal();
+}
+
+function mulaiTimer(){
+  document.getElementById("timer").innerText="Waktu: "+waktu;
+  timerInterval = setInterval(()=>{
+    waktu--;
+    document.getElementById("timer").innerText="Waktu: "+waktu;
+    if(waktu<=0){
+      clearInterval(timerInterval);
+      selesaiUjian();
+    }
+  },1000);
+}
+
+function tampilSoal(){
+  if(indeks>=soalAktif.length){ selesaiUjian(); return; }
+  const s = soalAktif[indeks];
+  let html=`<h3>${s.soal}</h3>`;
+  s.pilihan.forEach((p,i)=>{ html+=`<button onclick="jawab(${i})">${p}</button><br>`; });
+  document.getElementById("areaSoal").innerHTML=html;
+}
+
+function jawab(i){
+  if(i===soalAktif[indeks].jawaban) skor++;
+  indeks++;
+  tampilSoal();
+}
+
+function selesaiUjian(){
+  if(sudahSelesai) return;
+  sudahSelesai=true;
+
+  const nama=document.getElementById("nama").value;
+  const kelas=document.getElementById("kelas").value;
+
+  // kirim ke Google Sheet
+  fetch("https://script.google.com/macros/s/AKfycbydmsybv-W60sapT0_sJAaxj6GUfCKIaIMn8aCGeZYKk2jzUtsDe5ufQTY5ZfNadCca/exec",{
+    method:"POST",
+    mode:"no-cors",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      nama:nama,
+      kelas:kelas,
+      skor:skor,
+      total:soalAktif.length
+    })
+  });
+
+  document.getElementById("areaSoal").innerHTML=
+    `<h3>Ujian Selesai</h3><p>Skor: ${skor}/${soalAktif.length}</p>`;
+}
+</script>
+
+</body>
+</html>
